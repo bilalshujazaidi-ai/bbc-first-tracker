@@ -20,3 +20,8 @@ alter table shows enable row level security;
 create policy "public read access" on shows
   for select
   using (true);
+
+-- service_role bypasses RLS but still needs an explicit table grant on some
+-- Supabase projects — without this, the GitHub Action's writes get a
+-- "permission denied for table shows" error.
+grant select, insert, update on public.shows to service_role;
