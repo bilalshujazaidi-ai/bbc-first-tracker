@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run scraper with retries
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_URL: https://vpgiavduczlqvfcigmdg.supabase.co
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
           for attempt in 1 2 3 4 5; do
