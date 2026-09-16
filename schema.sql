@@ -25,3 +25,8 @@ create policy "public read access" on shows
 -- Supabase projects — without this, the GitHub Action's writes get a
 -- "permission denied for table shows" error.
 grant select, insert, update on public.shows to service_role;
+
+-- Same quirk applies to anon: the RLS policy above allows the read, but an
+-- explicit table grant is still required or the tracker page's read fails
+-- with the same "permission denied" error.
+grant select on public.shows to anon;
