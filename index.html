@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BBC First Arrivals Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,500;0,600;1,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #FAF7F1;
+    --surface: #FFFFFF;
+    --surface-2: #F2EDE3;
+    --ink: #221F1A;
+    --muted: #746C5F;
+    --border: #E5DDCC;
+    --accent: #8C2A34;
+    --accent-soft: #F6E4E1;
+    --navy: #2E4256;
+    --navy-soft: #E4EAF0;
+    --good: #3C6E47;
+    --good-soft: #E1EEE3;
+    --gone: #8A6D3B;
+    --gone-soft: #F1E8D6;
+    --shadow: 0 1px 2px rgba(34,31,26,0.06), 0 8px 24px -12px rgba(34,31,26,0.18);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15161A;
+      --surface: #1D1F24;
+      --surface-2: #24262C;
+      --ink: #EDEAE2;
+      --muted: #9B9488;
+      --border: #33353C;
+      --accent: #E0808A;
+      --accent-soft: #3A2327;
+      --navy: #9DBAD6;
+      --navy-soft: #232B34;
+      --good: #8FC79B;
+      --good-soft: #1E2B21;
+      --gone: #D8B36B;
+      --gone-soft: #2C2517;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    padding: clamp(20px, 4vw, 56px);
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .wrap { max-width: 980px; margin: 0 auto; }
+
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  h1 {
+    font-family: "Spectral", Georgia, serif;
+    font-weight: 600;
+    font-size: clamp(28px, 4vw, 38px);
+    margin: 0 0 6px;
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+  }
+
+  .kicker {
+    font-family: "IBM Plex Mono", monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    font-size: 11.5px;
+    color: var(--accent);
+    font-weight: 500;
+    margin-bottom: 10px;
+    display: block;
+  }
+
+  .subtitle { color: var(--muted); font-size: 14.5px; max-width: 52ch; }
+  .subtitle a { color: inherit; }
+
+  .status {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12.5px;
+    color: var(--muted);
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .status strong { color: var(--ink); font-weight: 500; }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 28px;
+    box-shadow: var(--shadow);
+  }
+
+  .stat { background: var(--surface); padding: 16px 18px; }
+  .stat .num {
+    font-family: "IBM Plex Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 26px;
+    font-weight: 500;
+    line-height: 1.1;
+  }
+  .stat .label { color: var(--muted); font-size: 12px; margin-top: 4px; }
+
+  .new-panel {
+    background: var(--accent-soft);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 28px;
+  }
+  .new-panel h2 {
+    font-family: "Spectral", Georgia, serif;
+    font-size: 17px;
+    font-weight: 600;
+    margin: 0 0 4px;
+  }
+  .new-panel p.hint { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
+  .new-list { display: flex; flex-wrap: wrap; gap: 8px; }
+  .new-chip {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 13.5px;
+    font-weight: 500;
+  }
+
+  .gone-panel {
+    background: var(--gone-soft);
+    border: 1px solid color-mix(in srgb, var(--gone) 30%, var(--border));
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 28px;
+  }
+  .gone-panel h2 {
+    font-family: "Spectral", Georgia, serif;
+    font-size: 17px;
+    font-weight: 600;
+    margin: 0 0 4px;
+    color: var(--gone);
+  }
+  .gone-panel p.hint { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
+
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  .table-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-2);
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .table-toolbar h2 {
+    font-family: "Spectral", Georgia, serif;
+    font-size: 16.5px;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .sort-group { display: flex; gap: 6px; font-size: 12.5px; }
+  .sort-btn {
+    font-family: "IBM Plex Sans", sans-serif;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 5px 10px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 12.5px;
+  }
+  .sort-btn:hover { color: var(--ink); border-color: var(--muted); }
+  .sort-btn.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .sort-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .table-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 680px; }
+  thead th {
+    text-align: left;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    font-weight: 500;
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody td { padding: 11px 18px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--surface-2); }
+
+  .title-cell { font-weight: 500; }
+  td.num, th.num { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; text-align: right; }
+
+  .badge-new {
+    display: inline-block; background: var(--good-soft); color: var(--good);
+    font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+    padding: 2px 7px; border-radius: 5px; margin-left: 8px; vertical-align: middle;
+  }
+  .channel-pill {
+    display: inline-block; background: var(--navy-soft); color: var(--navy);
+    font-size: 12px; font-weight: 500; padding: 3px 9px; border-radius: 999px;
+  }
+
+  footer { margin-top: 22px; color: var(--muted); font-size: 12.5px; max-width: 68ch; }
+  footer p { margin: 0 0 6px; }
+
+  .loading, .offline { padding: 60px 20px; text-align: center; color: var(--muted); font-size: 14px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <span class="kicker">Streaming arrivals log</span>
+      <h1>BBC First Arrivals Tracker</h1>
+      <p class="subtitle">A running record of what's listed on BBC First's <a href="https://player.bbc.com/en/viewall/2907dff2-f7ec-4f0c-ab64-54807e084c83/New-Dramas-on-BBC-First">New Dramas</a> page, rescraped once a day by a GitHub Action so new titles get a timestamp.</p>
+    </div>
+    <div class="status" id="statusLine">Loading…</div>
+  </header>
+
+  <div id="content" hidden>
+    <div class="stats">
+      <div class="stat"><div class="num" id="statTotal">–</div><div class="label">Currently listed</div></div>
+      <div class="stat"><div class="num" id="statDays">–</div><div class="label">Days of history</div></div>
+      <div class="stat"><div class="num" id="statNew">–</div><div class="label">New since last check</div></div>
+      <div class="stat"><div class="num" id="statGone">–</div><div class="label">No longer listed</div></div>
+    </div>
+
+    <div class="new-panel" id="newPanel">
+      <h2>New since last scrape</h2>
+      <p class="hint" id="newHint"></p>
+      <div class="new-list" id="newList"></div>
+    </div>
+
+    <div class="gone-panel" id="gonePanel" hidden>
+      <h2>No longer listed</h2>
+      <p class="hint" id="goneHint"></p>
+      <div class="new-list" id="goneList"></div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-toolbar">
+        <h2>Currently listed</h2>
+        <div class="sort-group" role="group" aria-label="Sort table">
+          <button class="sort-btn" data-sort="new">Newest first</button>
+          <button class="sort-btn" data-sort="az">A–Z</button>
+          <button class="sort-btn" data-sort="expiring">Leaving soonest</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th class="num">Season</th>
+              <th class="num">Episodes</th>
+              <th class="num">Available for</th>
+              <th>Channel</th>
+              <th>First tracked</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <footer>
+      <p><strong>How to read "First tracked":</strong> the date this tracker's daily scrape first saw a title — not its original broadcast or release date. Titles already listed the first day this tracker ran all share that day's date as a baseline.</p>
+      <p id="footNote"></p>
+    </footer>
+  </div>
+
+  <div class="loading" id="loadingMsg">Loading tracked titles…</div>
+  <div class="offline" id="offlineMsg" hidden></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+  const SUPABASE_URL = "https://vpgiavduczlqvfcigmdg.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZwZ2lhdmR1Y3pscXZmY2lnbWRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0NzU4MjQsImV4cCI6MjEwNTA1MTgyNH0.5AicyIbqQMVUQ63_WRsahYPNbYcN0ojFN96u4Vlf7ZM";
+
+  function fmtDate(iso) {
+    const d = new Date(iso + "T00:00:00");
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  }
+
+  function daysAgo(iso) {
+    const d = new Date(iso + "T00:00:00");
+    const now = new Date();
+    now.setHours(0,0,0,0);
+    return Math.round((now - d) / 86400000);
+  }
+
+  function relativeFirstSeen(iso, latestDate) {
+    if (iso === latestDate) return "Today";
+    if (daysAgo(iso) === 1) return "Yesterday";
+    return fmtDate(iso);
+  }
+
+  function daysUntil(endIso) {
+    if (!endIso) return null;
+    const end = new Date(endIso);
+    const now = new Date();
+    return Math.max(0, Math.round((end - now) / 86400000));
+  }
+
+  function splitSeason(title) {
+    const m = title.match(/\s+S(\d{1,3})$/);
+    if (m) return { base: title.slice(0, m.index), season: parseInt(m[1], 10) };
+    return { base: title, season: null };
+  }
+
+  function compareBaseTitle(a, b) {
+    return a.base.localeCompare(b.base) || (a.season || 0) - (b.season || 0);
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  }
+
+  let state = { shows: [], latestDate: null, sort: "new" };
+
+  function render() {
+    const tbody = document.getElementById("tbody");
+    let rows = state.shows.slice();
+
+    if (state.sort === "az") {
+      rows.sort(compareBaseTitle);
+    } else if (state.sort === "expiring") {
+      rows.sort((a, b) => daysUntil(a.end_date) - daysUntil(b.end_date));
+    } else {
+      rows.sort((a, b) => {
+        if (a.first_seen !== b.first_seen) return a.first_seen < b.first_seen ? 1 : -1;
+        return compareBaseTitle(a, b);
+      });
+    }
+
+    tbody.innerHTML = rows.map(s => {
+      const isNew = s.first_seen === state.latestDate && state.totalDays > 1;
+      const left = daysUntil(s.end_date);
+      return `<tr>
+        <td class="title-cell">${escapeHtml(s.base)}${isNew ? '<span class="badge-new">NEW</span>' : ''}</td>
+        <td class="num">${s.season ?? "–"}</td>
+        <td class="num">${s.episodes ?? "–"}</td>
+        <td class="num">${left === null ? "–" : left + "d"}</td>
+        <td><span class="channel-pill">${escapeHtml(s.channel || "BBC First")}</span></td>
+        <td>${relativeFirstSeen(s.first_seen, state.latestDate)}</td>
+      </tr>`;
+    }).join("");
+
+    document.querySelectorAll(".sort-btn").forEach(b => {
+      b.classList.toggle("active", b.dataset.sort === state.sort);
+    });
+  }
+
+  document.querySelectorAll(".sort-btn").forEach(b => {
+    b.addEventListener("click", () => { state.sort = b.dataset.sort; render(); });
+  });
+
+  async function boot() {
+    const statusLine = document.getElementById("statusLine");
+    const loadingMsg = document.getElementById("loadingMsg");
+    const offlineMsg = document.getElementById("offlineMsg");
+    const content = document.getElementById("content");
+
+    const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const { data: allRows, error } = await client.from("shows").select("*");
+
+    if (error) {
+      loadingMsg.hidden = true;
+      offlineMsg.hidden = false;
+      offlineMsg.textContent = "Couldn't load data: " + error.message;
+      return;
+    }
+
+    if (!allRows || allRows.length === 0) {
+      loadingMsg.hidden = true;
+      offlineMsg.hidden = false;
+      offlineMsg.textContent = "No scrapes recorded yet. Once the daily GitHub Action runs, titles will appear here.";
+      return;
+    }
+
+    const lastSeenDates = [...new Set(allRows.map(r => r.last_seen))].sort();
+    const latestDate = lastSeenDates[lastSeenDates.length - 1];
+    const prevDate = lastSeenDates.length > 1 ? lastSeenDates[lastSeenDates.length - 2] : null;
+    const totalDays = lastSeenDates.length;
+
+    const current = allRows.filter(r => r.last_seen === latestDate);
+    const departed = allRows.filter(r => r.last_seen !== latestDate);
+
+    const shows = current.map(s => ({ ...s, ...splitSeason(s.title) }));
+    const newTitles = shows.filter(s => s.first_seen === latestDate && totalDays > 1);
+    const justDeparted = prevDate ? departed.filter(r => r.last_seen === prevDate) : [];
+
+    state.shows = shows;
+    state.latestDate = latestDate;
+    state.totalDays = totalDays;
+
+    document.getElementById("statTotal").textContent = shows.length;
+    document.getElementById("statDays").textContent = totalDays;
+    document.getElementById("statNew").textContent = newTitles.length;
+    document.getElementById("statGone").textContent = departed.length;
+
+    const newHint = document.getElementById("newHint");
+    const newList = document.getElementById("newList");
+    if (totalDays === 1) {
+      newHint.textContent = "Tracking started " + fmtDate(latestDate) + " — check back tomorrow to see arrivals highlighted here.";
+    } else if (newTitles.length === 0) {
+      newHint.textContent = "No new titles since the last scrape" + (prevDate ? " (" + fmtDate(prevDate) + " → " + fmtDate(latestDate) + ")." : ".");
+    } else {
+      newHint.textContent = "Spotted for the first time on " + fmtDate(latestDate) + ":";
+    }
+    newList.innerHTML = newTitles.map(s => `<span class="new-chip">${escapeHtml(s.title)}</span>`).join("");
+
+    const gonePanel = document.getElementById("gonePanel");
+    if (justDeparted.length > 0) {
+      gonePanel.hidden = false;
+      document.getElementById("goneHint").textContent = "Left the library since " + fmtDate(prevDate) + ":";
+      document.getElementById("goneList").innerHTML = justDeparted.map(s => `<span class="new-chip">${escapeHtml(s.title)}</span>`).join("");
+    }
+
+    statusLine.innerHTML = "Last scrape<br><strong>" + fmtDate(latestDate) + "</strong>";
+
+    const footNote = document.getElementById("footNote");
+    footNote.textContent = departed.length > 0
+      ? "Titles no longer in the current listing (" + departed.length + " total, across all history) are kept out of the main table but counted above."
+      : "";
+
+    loadingMsg.hidden = true;
+    content.hidden = false;
+    render();
+  }
+
+  boot().catch(e => {
+    document.getElementById("loadingMsg").hidden = true;
+    const el = document.getElementById("offlineMsg");
+    el.hidden = false;
+    el.textContent = "Something went wrong loading the tracker: " + e.message;
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+name: Daily BBC First scrape
+
+on:
+  schedule:
+    # 09:03 UTC ≈ 10:03am UK during BST (summer), 09:03am UK during GMT (winter).
+    - cron: "3 9 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run scraper with retries
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          for attempt in 1 2 3 4 5; do
+            if python3 "$GITHUB_WORKSPACE/scripts/scrape.py"; then
+              exit 0
+            fi
+            echo "Attempt $attempt failed, retrying in 60s..."
+            sleep 60
+          done
+          echo "All attempts failed."
+          exit 1
