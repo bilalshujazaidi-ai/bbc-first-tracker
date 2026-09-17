@@ -2,12 +2,14 @@ name: Daily BBC First scrape
 
 on:
   schedule:
-    # 09:03 UTC ≈ 10:03am UK during BST (summer), 09:03am UK during GMT (winter).
-    - cron: "3 9 * * *"
-    # Backup fire ~6 hours later, in case the primary schedule gets skipped
-    # (a known GitHub Actions quirk — cron triggers aren't 100% guaranteed).
-    # Safe to run twice a day: re-running just re-confirms the same data.
-    - cron: "3 15 * * *"
+    # Every 30 minutes, all day. GitHub's cron trigger is "best effort" and
+    # occasionally skips a firing entirely (this happened once already) —
+    # rather than depend on one exact time, this gives today's scrape ~48
+    # chances to land. scrape.py checks first and does nothing once a run
+    # has already succeeded today, so this costs almost nothing: most of
+    # these firings finish in under a second. The repo is public, so
+    # GitHub Actions minutes are free/unlimited here regardless.
+    - cron: "*/30 * * * *"
   workflow_dispatch: {}
 
 jobs:

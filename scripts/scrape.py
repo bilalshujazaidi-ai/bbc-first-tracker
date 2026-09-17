@@ -4,6 +4,13 @@
 Reads SUPABASE_URL and SUPABASE_SERVICE_KEY from the environment (set as
 GitHub Actions secrets). Writes nothing if the fetch fails or looks empty,
 so a bad run can never overwrite good data with junk.
+
+Runs every 30 minutes via GitHub Actions (see scrape.yml) but is a no-op
+once a run has succeeded for today — this is what makes the schedule
+self-healing: GitHub's cron trigger is only "best effort" and occasionally
+skips a firing entirely, so instead of relying on one scheduled time,
+today's data gets ~48 chances to land, and every run after the first
+successful one exits in under a second.
 """
 import datetime
 import json
@@ -31,16 +38,33 @@ def fetch_nodes():
     return data["page"]["sections"][0]["collection"]["nodes"]
 
 
+def already_scraped_today(supabase_url, service_key, today):
+    """True if any row already has last_seen = today, meaning an earlier
+    firing today (this workflow runs every 30 minutes as a safety net
+    against GitHub's scheduler occasionally skipping a trigger) already
+    succeeded. Lets every run stay a cheap no-op once one has landed."""
+    req = urllib.request.Request(
+        f"{supabase_url}/rest/v1/shows?select=id&last_seen=eq.{today}&limit=1",
+        headers={"apikey": service_key, "Authorization": f"Bearer {service_key}"},
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        return len(json.load(resp)) > 0
+
+
 def main():
     supabase_url = os.environ["SUPABASE_URL"].rstrip("/")
     service_key = os.environ["SUPABASE_SERVICE_KEY"]
+    today = datetime.date.today().isoformat()
+
+    if already_scraped_today(supabase_url, service_key, today):
+        print(f"Already recorded for {today} — nothing to do.")
+        return
 
     nodes = fetch_nodes()
     if not nodes:
         print("No shows found in the BBC response — aborting without writing.")
         sys.exit(1)
 
-    today = datetime.date.today().isoformat()
     rows = [
         {
             "id": n["id"],

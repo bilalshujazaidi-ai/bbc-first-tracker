@@ -6,8 +6,16 @@ no laptop, no Claude session, no permission prompts required after setup.
 
 ## How it works
 
-- `.github/workflows/scrape.yml` runs `scripts/scrape.py` once a day (and
-  retries a few times on failure) on GitHub's own servers.
+- `.github/workflows/scrape.yml` fires every 30 minutes on GitHub's own
+  servers. GitHub's `cron` trigger is "best effort" and occasionally skips a
+  firing entirely, so rather than rely on one exact time, today's scrape
+  gets ~48 chances to land.
+- `scripts/scrape.py` checks first whether today's data is already recorded
+  and exits immediately if so — so once one firing succeeds, every later one
+  that day is a no-op costing under a second. If the actual scrape fails
+  (BBC unreachable, bad response), the workflow retries it 5 times, 60
+  seconds apart, before giving up for that firing (the next firing 30
+  minutes later tries again from scratch).
 - The script fetches BBC's public catalogue API and upserts it into a
   Supabase table called `shows`. Existing shows get their `last_seen` date
   bumped; new shows get `first_seen` set to today automatically.
