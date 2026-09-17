@@ -4,6 +4,10 @@ on:
   schedule:
     # 09:03 UTC ≈ 10:03am UK during BST (summer), 09:03am UK during GMT (winter).
     - cron: "3 9 * * *"
+    # Backup fire ~6 hours later, in case the primary schedule gets skipped
+    # (a known GitHub Actions quirk — cron triggers aren't 100% guaranteed).
+    # Safe to run twice a day: re-running just re-confirms the same data.
+    - cron: "3 15 * * *"
   workflow_dispatch: {}
 
 jobs:
