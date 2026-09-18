@@ -316,6 +316,13 @@
     return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
   }
 
+  function fmtUKDateTime(iso) {
+    const d = new Date(iso);
+    const datePart = d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/London" });
+    const timePart = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London", timeZoneName: "short" });
+    return datePart + ", " + timePart;
+  }
+
   function daysAgo(iso) {
     const d = new Date(iso + "T00:00:00");
     const now = new Date();
@@ -397,6 +404,8 @@
 
     const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const { data: allRows, error } = await client.from("shows").select("*");
+    const { data: metaRows } = await client.from("scrape_meta").select("last_scraped_at").eq("id", "singleton").limit(1);
+    const lastScrapedAt = metaRows && metaRows[0] ? metaRows[0].last_scraped_at : null;
 
     if (error) {
       loadingMsg.hidden = true;
@@ -451,7 +460,7 @@
       document.getElementById("goneList").innerHTML = justDeparted.map(s => `<span class="new-chip">${escapeHtml(s.title)}</span>`).join("");
     }
 
-    statusLine.innerHTML = "Last scrape<br><strong>" + fmtDate(latestDate) + "</strong>";
+    statusLine.innerHTML = "Last scrape<br><strong>" + (lastScrapedAt ? fmtUKDateTime(lastScrapedAt) : fmtDate(latestDate)) + "</strong>";
 
     const footNote = document.getElementById("footNote");
     footNote.textContent = departed.length > 0

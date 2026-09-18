@@ -30,3 +30,19 @@ grant select, insert, update on public.shows to service_role;
 -- explicit table grant is still required or the tracker page's read fails
 -- with the same "permission denied" error.
 grant select on public.shows to anon;
+
+-- A single-row table recording exactly when the scrape last actually wrote
+-- data (shows.last_seen is date-only, so it can't show a time of day).
+create table if not exists scrape_meta (
+  id text primary key default 'singleton',
+  last_scraped_at timestamptz not null default now()
+);
+
+alter table scrape_meta enable row level security;
+
+create policy "public read access" on scrape_meta
+  for select
+  using (true);
+
+grant select, insert, update on public.scrape_meta to service_role;
+grant select on public.scrape_meta to anon;

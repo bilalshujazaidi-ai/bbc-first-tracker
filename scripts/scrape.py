@@ -38,6 +38,22 @@ def fetch_nodes():
     return data["page"]["sections"][0]["collection"]["nodes"]
 
 
+def upsert(supabase_url, service_key, table, rows, on_conflict):
+    req = urllib.request.Request(
+        f"{supabase_url}/rest/v1/{table}?on_conflict={on_conflict}",
+        data=json.dumps(rows).encode(),
+        method="POST",
+        headers={
+            "apikey": service_key,
+            "Authorization": f"Bearer {service_key}",
+            "Content-Type": "application/json",
+            "Prefer": "resolution=merge-duplicates,return=minimal",
+        },
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        return resp.status
+
+
 def already_scraped_today(supabase_url, service_key, today):
     """True if any row already has last_seen = today, meaning an earlier
     firing today (this workflow runs every 30 minutes as a safety net
@@ -77,24 +93,25 @@ def main():
         for n in nodes
     ]
 
-    body = json.dumps(rows).encode()
-    req = urllib.request.Request(
-        f"{supabase_url}/rest/v1/shows?on_conflict=id",
-        data=body,
-        method="POST",
-        headers={
-            "apikey": service_key,
-            "Authorization": f"Bearer {service_key}",
-            "Content-Type": "application/json",
-            "Prefer": "resolution=merge-duplicates,return=minimal",
-        },
-    )
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            status = resp.status
+        status = upsert(supabase_url, service_key, "shows", rows, "id")
     except urllib.error.HTTPError as e:
         print(f"Supabase upsert failed: {e.code} {e.read().decode()}")
         sys.exit(1)
+
+    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    try:
+        upsert(
+            supabase_url,
+            service_key,
+            "scrape_meta",
+            [{"id": "singleton", "last_scraped_at": now_iso}],
+            "id",
+        )
+    except urllib.error.HTTPError as e:
+        # The shows table already got written successfully — don't fail the
+        # whole run over the timestamp record not updating.
+        print(f"Warning: couldn't update scrape_meta: {e.code} {e.read().decode()}")
 
     print(f"Upsert OK (HTTP {status}). Recorded {len(rows)} shows for {today}.")
 
