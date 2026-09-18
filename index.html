@@ -447,7 +447,7 @@
     if (totalDays === 1) {
       newHint.textContent = "Tracking started " + fmtDate(latestDate) + " — check back tomorrow to see arrivals highlighted here.";
     } else if (newTitles.length === 0) {
-      newHint.textContent = "No new titles since the last scrape" + (prevDate ? " (" + fmtDate(prevDate) + " → " + fmtDate(latestDate) + ")." : ".");
+      newHint.textContent = "No new titles as of the latest scrape (" + fmtDate(latestDate) + ").";
     } else {
       newHint.textContent = "Spotted for the first time on " + fmtDate(latestDate) + ":";
     }
