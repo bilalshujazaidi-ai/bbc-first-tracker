@@ -5,12 +5,15 @@ Reads SUPABASE_URL and SUPABASE_SERVICE_KEY from the environment (set as
 GitHub Actions secrets). Writes nothing if the fetch fails or looks empty,
 so a bad run can never overwrite good data with junk.
 
-Runs every 30 minutes via GitHub Actions (see scrape.yml) but is a no-op
-once a run has succeeded for today — this is what makes the schedule
-self-healing: GitHub's cron trigger is only "best effort" and occasionally
-skips a firing entirely, so instead of relying on one scheduled time,
-today's data gets ~48 chances to land, and every run after the first
-successful one exits in under a second.
+Scheduled every 30 minutes via GitHub Actions (see scrape.yml), though in
+practice GitHub throttles how often it actually honors a frequent cron
+schedule — real firings tend to land hours apart rather than every 30
+minutes. Either way, this script is a no-op once a run has succeeded for
+today, so however often it actually fires, the schedule stays self-healing:
+GitHub's cron trigger is only "best effort" and occasionally skips a firing
+entirely, so instead of relying on one scheduled time, today's data gets
+many chances to land, and every run after the first successful one exits
+in under a second.
 """
 import datetime
 import json
@@ -54,6 +57,24 @@ def upsert(supabase_url, service_key, table, rows, on_conflict):
         return resp.status
 
 
+def touch_scrape_meta(supabase_url, service_key):
+    """Record that the workflow actually ran and confirmed things just now
+    — called whether or not there was new data to write, so 'last scrape'
+    on the tracker page reflects the last real check-in, not just the last
+    time something changed."""
+    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    try:
+        upsert(
+            supabase_url,
+            service_key,
+            "scrape_meta",
+            [{"id": "singleton", "last_scraped_at": now_iso}],
+            "id",
+        )
+    except urllib.error.HTTPError as e:
+        print(f"Warning: couldn't update scrape_meta: {e.code} {e.read().decode()}")
+
+
 def already_scraped_today(supabase_url, service_key, today):
     """True if any row already has last_seen = today, meaning an earlier
     firing today (this workflow runs every 30 minutes as a safety net
@@ -73,7 +94,8 @@ def main():
     today = datetime.date.today().isoformat()
 
     if already_scraped_today(supabase_url, service_key, today):
-        print(f"Already recorded for {today} — nothing to do.")
+        touch_scrape_meta(supabase_url, service_key)
+        print(f"Already recorded for {today} — confirmed current, nothing to change.")
         return
 
     nodes = fetch_nodes()
@@ -99,19 +121,7 @@ def main():
         print(f"Supabase upsert failed: {e.code} {e.read().decode()}")
         sys.exit(1)
 
-    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    try:
-        upsert(
-            supabase_url,
-            service_key,
-            "scrape_meta",
-            [{"id": "singleton", "last_scraped_at": now_iso}],
-            "id",
-        )
-    except urllib.error.HTTPError as e:
-        # The shows table already got written successfully — don't fail the
-        # whole run over the timestamp record not updating.
-        print(f"Warning: couldn't update scrape_meta: {e.code} {e.read().decode()}")
+    touch_scrape_meta(supabase_url, service_key)
 
     print(f"Upsert OK (HTTP {status}). Recorded {len(rows)} shows for {today}.")
 
