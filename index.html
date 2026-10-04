@@ -254,12 +254,12 @@
     <div class="stats">
       <div class="stat"><div class="num" id="statTotal">–</div><div class="label">Currently listed</div></div>
       <div class="stat"><div class="num" id="statDays">–</div><div class="label">Days of history</div></div>
-      <div class="stat"><div class="num" id="statNew">–</div><div class="label">New since last check</div></div>
+      <div class="stat"><div class="num" id="statNew">–</div><div class="label">New in last 7 days</div></div>
       <div class="stat"><div class="num" id="statGone">–</div><div class="label">No longer listed</div></div>
     </div>
 
     <div class="new-panel" id="newPanel">
-      <h2>New since last scrape</h2>
+      <h2>Recently added</h2>
       <p class="hint" id="newHint"></p>
       <div class="new-list" id="newList"></div>
     </div>
@@ -336,6 +336,14 @@
     return fmtDate(iso);
   }
 
+  const NEW_WINDOW_DAYS = 7;
+
+  function isRecent(firstSeenIso, latestDateIso) {
+    const a = Date.parse(firstSeenIso + "T00:00:00Z");
+    const b = Date.parse(latestDateIso + "T00:00:00Z");
+    return (b - a) / 86400000 < NEW_WINDOW_DAYS;
+  }
+
   function daysUntil(endIso) {
     if (!endIso) return null;
     const end = new Date(endIso);
@@ -375,7 +383,7 @@
     }
 
     tbody.innerHTML = rows.map(s => {
-      const isNew = s.first_seen === state.latestDate && state.totalDays > 1;
+      const isNew = isRecent(s.first_seen, state.latestDate) && state.totalDays > 1;
       const left = daysUntil(s.end_date);
       return `<tr>
         <td class="title-cell">${escapeHtml(s.base)}${isNew ? '<span class="badge-new">NEW</span>' : ''}</td>
@@ -430,7 +438,9 @@
     const departed = allRows.filter(r => r.last_seen !== latestDate);
 
     const shows = current.map(s => ({ ...s, ...splitSeason(s.title) }));
-    const newTitles = shows.filter(s => s.first_seen === latestDate && totalDays > 1);
+    const newTitles = shows
+      .filter(s => isRecent(s.first_seen, latestDate) && totalDays > 1)
+      .sort((a, b) => (a.first_seen < b.first_seen ? 1 : -1));
     const justDeparted = prevDate ? departed.filter(r => r.last_seen === prevDate) : [];
 
     state.shows = shows;
@@ -447,11 +457,11 @@
     if (totalDays === 1) {
       newHint.textContent = "Tracking started " + fmtDate(latestDate) + " — check back tomorrow to see arrivals highlighted here.";
     } else if (newTitles.length === 0) {
-      newHint.textContent = "No new titles as of the latest scrape (" + fmtDate(latestDate) + ").";
+      newHint.textContent = "No new titles in the last 7 days (latest scrape: " + fmtDate(latestDate) + ").";
     } else {
-      newHint.textContent = "Spotted for the first time on " + fmtDate(latestDate) + ":";
+      newHint.textContent = "First spotted in the last 7 days:";
     }
-    newList.innerHTML = newTitles.map(s => `<span class="new-chip">${escapeHtml(s.title)}</span>`).join("");
+    newList.innerHTML = newTitles.map(s => `<span class="new-chip">${escapeHtml(s.title)} <span style="color:var(--muted);font-weight:400">· ${relativeFirstSeen(s.first_seen, latestDate)}</span></span>`).join("");
 
     const gonePanel = document.getElementById("gonePanel");
     if (justDeparted.length > 0) {
