@@ -46,3 +46,24 @@ create policy "public read access" on scrape_meta
 
 grant select, insert, update on public.scrape_meta to service_role;
 grant select on public.scrape_meta to anon;
+
+-- Episodes available on the day a show was first tracked. Filled in
+-- automatically by this trigger the moment a show is first inserted, and
+-- never touched again (the daily upsert doesn't include this column, so
+-- later runs only refresh the live `episodes` count).
+alter table shows add column if not exists episodes_at_first_seen integer;
+
+create or replace function set_episodes_at_first_seen()
+returns trigger language plpgsql as $$
+begin
+  if new.episodes_at_first_seen is null then
+    new.episodes_at_first_seen := new.episodes;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists shows_set_episodes_at_first_seen on shows;
+create trigger shows_set_episodes_at_first_seen
+  before insert on shows
+  for each row execute function set_episodes_at_first_seen();

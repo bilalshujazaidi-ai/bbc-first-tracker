@@ -204,7 +204,7 @@
   .sort-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   .table-scroll { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 680px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 780px; }
   thead th {
     text-align: left;
     font-size: 11.5px;
@@ -286,6 +286,7 @@
               <th>Title</th>
               <th class="num">Season</th>
               <th class="num">Episodes</th>
+              <th class="num">Eps when first tracked</th>
               <th class="num">Available for</th>
               <th>Channel</th>
               <th>First tracked</th>
@@ -389,6 +390,7 @@
         <td class="title-cell">${escapeHtml(s.base)}${isNew ? '<span class="badge-new">NEW</span>' : ''}</td>
         <td class="num">${s.season ?? "–"}</td>
         <td class="num">${s.episodes ?? "–"}</td>
+        <td class="num">${s.episodes_at_first_seen ?? "n/a"}</td>
         <td class="num">${left === null ? "–" : left + "d"}</td>
         <td><span class="channel-pill">${escapeHtml(s.channel || "BBC First")}</span></td>
         <td>${relativeFirstSeen(s.first_seen, state.latestDate)}</td>
